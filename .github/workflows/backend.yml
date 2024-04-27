@@ -22,7 +22,7 @@ jobs:
     runs-on: "ubuntu-22.04"
 
     steps:
-      - name: Checkout Code
+      - name: Clone the repo
         uses: actions/checkout@v4
 
       - name: Set up Python environment
@@ -44,7 +44,7 @@ jobs:
     runs-on: "ubuntu-22.04"
 
     steps:
-      - name: Checkout Code
+      - name: Clone the repo
         uses: actions/checkout@v4
 
       - name: Set up Python environment
@@ -68,7 +68,7 @@ jobs:
 #    needs: [ lint, test ]
 
     steps:
-      - name: Clone the repository
+      - name: Clone the repo
         uses: actions/checkout@v4
 
       - name: Configure AWS credentials
@@ -104,7 +104,7 @@ jobs:
 #    needs: build
 
     steps:
-      - name: Checkout code
+      - name: Clone the repo
         uses: actions/checkout@v4
 
       - name: Configure AWS credentials
@@ -124,12 +124,12 @@ jobs:
         run: aws eks update-kubeconfig --region ${{ secrets.AWS_DEFAULT_REGION }} --name ${{ vars.CLUSTER_NAME }}
 
       - name: Kustomize set image
-        working-directory: ./k8s
+        working-directory: backend/k8s
         run: |
           kustomize edit set image backend=${{ vars.ECR_REGISTRY }}/movie-backend:latest
 
       - name: Deploy application to EKS cluster
-        working-directory: ./k8s
+        working-directory: backend/k8s
         run: |
           kustomize build . | kubectl apply -f -
 
