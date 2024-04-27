@@ -1,6 +1,11 @@
 name: Frontend CI Pipeline
 
 on:
+  pull_request:
+    branches:
+      - "master"
+    paths:
+      - "frontend/**"
   workflow_call:
 
 defaults:

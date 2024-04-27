@@ -4,6 +4,8 @@ on:
   pull_request:
     branches:
       - "master"
+    paths:
+      - "backend/**"
   workflow_call:
 
 defaults:
