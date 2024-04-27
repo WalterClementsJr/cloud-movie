@@ -15,50 +15,17 @@ defaults:
 jobs:
   frontend-ci:
     uses: ./.github/workflows/frontend-ci.yml
-
-  build:
-    # check if workflow is started manually or the previous workflow succeeded
-    # if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
-    runs-on: "ubuntu-22.04"
-    environment: dev
-    needs:
-      - frontend-ci
-
-    steps:
-      - name: Clone the repo
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
-          # role-to-assume: github-action-user
-
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
-        with:
-          mask-password: 'true'
-
-      - name: Build and push docker image to Amazon ECR
-        run: |
-          export ECR_REGISTRY=${{ vars.ECR_REGISTRY }}
-
-          export FE_IMAGE_TAG=${{ github.sha }}
-          docker-compose build movie-frontend
-          docker-compose push movie-frontend
-
-          export FE_IMAGE_TAG="latest"
-          docker-compose build movie-frontend
-          docker-compose push movie-frontend
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+    with:
+      vars.ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
 
   deploy:
     runs-on: "ubuntu-22.04"
     environment: dev
-    needs: build
-    # do not run on PRs
-    if: ${{ github.event_name != 'pull_request' }}
+    needs: [ frontend-ci ]
 
     steps:
       - name: Clone the repo
@@ -70,7 +37,6 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
-          # role-to-assume: github-action-user
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
@@ -83,7 +49,7 @@ jobs:
       - name: Kustomize set image
         working-directory: frontend/k8s
         run: |
-          kustomize edit set image frontend=${{ vars.ECR_REGISTRY }}/movie-frontend:latest
+          kustomize edit set image frontend=${{ vars.ECR_REGISTRY }}/movie-frontend:${{ github.sha }}
 
       - name: Deploy application to EKS cluster
         working-directory: frontend/k8s
