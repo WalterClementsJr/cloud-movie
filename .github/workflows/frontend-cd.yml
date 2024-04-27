@@ -17,8 +17,6 @@ jobs:
     uses: ./.github/workflows/frontend-ci.yml
 
   build:
-    # check if workflow is started manually or the previous workflow succeeded
-    # if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: "ubuntu-22.04"
     environment: dev
     needs:
@@ -34,7 +32,6 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
-          # role-to-assume: github-action-user
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
@@ -70,7 +67,6 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
-          # role-to-assume: github-action-user
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
@@ -83,7 +79,7 @@ jobs:
       - name: Kustomize set image
         working-directory: frontend/k8s
         run: |
-          kustomize edit set image frontend=${{ vars.ECR_REGISTRY }}/movie-frontend:latest
+          kustomize edit set image frontend=${{ vars.ECR_REGISTRY }}/movie-frontend:${{ github.sha }}
 
       - name: Deploy application to EKS cluster
         working-directory: frontend/k8s
