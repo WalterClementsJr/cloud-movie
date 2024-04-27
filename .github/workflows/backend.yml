@@ -1,0 +1,143 @@
+name: Backend Pipeline
+
+on:
+  push:
+    branches:
+      - 'master'
+    paths:
+      - 'backend/**'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+defaults:
+  run:
+    working-directory: ./backend
+
+jobs:
+  lint:
+    if: False
+    runs-on: "ubuntu-22.04"
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python environment
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install pipenv flake8
+          pipenv install
+
+      - name: Run Linting
+        run: |
+          pipenv run lint
+
+  test:
+    if: False
+    runs-on: "ubuntu-22.04"
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python environment
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install pipenv
+          pipenv install
+
+      - name: Run Tests
+        run: |
+          pipenv run test
+
+  build:
+    if: False
+    runs-on: "ubuntu-22.04"
+    environment: dev
+#    needs: [ lint, test ]
+
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+          # role-to-assume: arn:aws:iam::077294513465:user/github-action-user
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          mask-password: 'true'
+
+      - name: Build and push docker image to Amazon ECR
+        run: |
+          cd ..
+          export ECR_REGISTRY=${{ vars.ECR_REGISTRY }}
+
+          export BE_IMAGE_TAG=${{ github.sha }}
+          docker-compose build movie-backend
+          docker-compose push movie-backend
+
+          export BE_IMAGE_TAG="latest"
+          docker-compose build movie-backend
+          docker-compose push movie-backend
+
+  deploy:
+    if: True
+    runs-on: "ubuntu-22.04"
+    environment: dev
+#    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+          # role-to-assume: arn:aws:iam::077294513465:user/github-action-user
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          mask-password: 'true'
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --region ${{ secrets.AWS_DEFAULT_REGION }} --name ${{ vars.CLUSTER_NAME }}
+
+      - name: Kustomize set image
+        working-directory: ./k8s
+        run: |
+          kustomize edit set image backend=${{ vars.ECR_REGISTRY }}/movie-backend:latest
+
+      - name: Deploy application to EKS cluster
+        working-directory: ./k8s
+        run: |
+          kustomize build . | kubectl apply -f -
+
+      - name: Verify deployment
+        run: |
+          if kubectl rollout status deployment/backend | grep -q 'successfully rolled out'; then
+            echo "Backend deployment succeeded."
+          else
+            echo "Backend deployment failed."
+            exit 1
+          fi

@@ -1,0 +1,28 @@
+version: "3.9"
+
+x-movie-backend:
+  &default-movie-backend
+  build:
+    context: ./backend
+  image: 077294513465.dkr.ecr.us-east-1.amazonaws.com/movie-backend:${BE_IMAGE_TAG}
+
+x-movie-frontend:
+  &default-movie-frontend
+  build:
+    context: ./backend
+  image: 077294513465.dkr.ecr.us-east-1.amazonaws.com/movie-frontend:${BE_IMAGE_TAG}
+
+services:
+  movie-backend:
+    *default-movie-backend
+
+  movie-backend-latest:
+    <<: *default-movie-backend
+    image: 077294513465.dkr.ecr.us-east-1.amazonaws.com/movie-backend:latest
+
+  movie-frontend:
+    *default-movie-frontend
+
+  movie-frontend-latest:
+    <<: *default-movie-frontend
+    image: 077294513465.dkr.ecr.us-east-1.amazonaws.com/movie-frontend:latest
