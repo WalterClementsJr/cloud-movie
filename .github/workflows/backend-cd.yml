@@ -1,7 +1,7 @@
 name: Backend CD Pipeline
 
 on:
-  pull_request:
+  push:
     branches:
       - "master"
     paths:
@@ -58,6 +58,8 @@ jobs:
     runs-on: "ubuntu-22.04"
     environment: dev
     needs: build
+    # do not run on PRs
+    if: ${{ github.event_name != 'pull_request' }}
 
     steps:
       - name: Clone the repo

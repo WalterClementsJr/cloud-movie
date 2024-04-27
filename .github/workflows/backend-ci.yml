@@ -1,6 +1,9 @@
 name: Backend CI Pipeline
 
 on:
+  pull_request:
+    branches:
+      - "master"
   workflow_call:
 
 defaults:
