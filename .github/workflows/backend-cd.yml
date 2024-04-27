@@ -12,7 +12,8 @@ defaults:
 
 jobs:
   build:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # check if workflow is started manually or the previous workflow succeeded
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: "ubuntu-22.04"
     environment: dev
 
@@ -47,7 +48,6 @@ jobs:
           docker-compose push movie-backend
 
   deploy:
-    if: False
     runs-on: "ubuntu-22.04"
     environment: dev
     needs: build
