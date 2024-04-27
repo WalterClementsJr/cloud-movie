@@ -1,21 +1,28 @@
 name: Frontend CD Pipeline
 
 on:
-  workflow_run:
-    workflows: ["Frontend CI Pipeline"]
-    type:
-      - completed
+  push:
+    branches:
+      - "master"
+    paths:
+      - "frontend/**"
+  workflow_dispatch:
 
 defaults:
   run:
     working-directory: ./frontend
 
 jobs:
+  frontend-ci:
+    uses: ./.github/workflows/frontend-ci.yml
+
   build:
     # check if workflow is started manually or the previous workflow succeeded
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    # if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: "ubuntu-22.04"
     environment: dev
+    needs:
+      - frontend-ci
 
     steps:
       - name: Clone the repo
@@ -50,6 +57,8 @@ jobs:
     runs-on: "ubuntu-22.04"
     environment: dev
     needs: build
+    # do not run on PRs
+    if: ${{ github.event_name != 'pull_request' }}
 
     steps:
       - name: Clone the repo

@@ -1,21 +1,28 @@
 name: Backend CD Pipeline
 
 on:
-  workflow_run:
-    workflows: ["Backend CI Pipeline"]
-    type:
-      - completed
+  push:
+    branches:
+      - "master"
+    paths:
+      - "backend/**"
+  workflow_dispatch:
 
 defaults:
   run:
     working-directory: ./backend
 
 jobs:
+  backend-ci:
+    uses: ./.github/workflows/backend-ci.yml
+
   build:
     # check if workflow is started manually or the previous workflow succeeded
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    # if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: "ubuntu-22.04"
     environment: dev
+    needs:
+      - backend-ci
 
     steps:
       - name: Clone the repo
@@ -51,6 +58,8 @@ jobs:
     runs-on: "ubuntu-22.04"
     environment: dev
     needs: build
+    # do not run on PRs
+    if: ${{ github.event_name != 'pull_request' }}
 
     steps:
       - name: Clone the repo
