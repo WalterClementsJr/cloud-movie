@@ -16,46 +16,10 @@ jobs:
   frontend-ci:
     uses: ./.github/workflows/frontend-ci.yml
 
-  build:
-    runs-on: "ubuntu-22.04"
-    environment: dev
-    needs:
-      - frontend-ci
-
-    steps:
-      - name: Clone the repo
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
-
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
-        with:
-          mask-password: 'true'
-
-      - name: Build and push docker image to Amazon ECR
-        run: |
-          export ECR_REGISTRY=${{ vars.ECR_REGISTRY }}
-
-          export FE_IMAGE_TAG=${{ github.sha }}
-          docker-compose build movie-frontend
-          docker-compose push movie-frontend
-
-          export FE_IMAGE_TAG="latest"
-          docker-compose build movie-frontend
-          docker-compose push movie-frontend
-
   deploy:
     runs-on: "ubuntu-22.04"
     environment: dev
-    needs: build
-    # do not run on PRs
-    if: ${{ github.event_name != 'pull_request' }}
+    needs: [ frontend-ci ]
 
     steps:
       - name: Clone the repo
@@ -66,7 +30,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+          aws-region: ${{ vars.AWS_DEFAULT_REGION }}
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
@@ -74,7 +38,7 @@ jobs:
           mask-password: 'true'
 
       - name: Update kubeconfig
-        run: aws eks update-kubeconfig --region ${{ secrets.AWS_DEFAULT_REGION }} --name ${{ vars.CLUSTER_NAME }}
+        run: aws eks update-kubeconfig --region ${{ vars.AWS_DEFAULT_REGION }} --name ${{ vars.CLUSTER_NAME }}
 
       - name: Kustomize set image
         working-directory: frontend/k8s
