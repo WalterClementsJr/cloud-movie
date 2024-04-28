@@ -14,9 +14,6 @@ on:
         required: true
       AWS_DEFAULT_REGION:
         required: true
-#    vars:
-#      ECR_REGISTRY:
-#        required: true
     inputs:
       vars.ECR_REGISTRY:
         type: string
@@ -97,8 +94,3 @@ jobs:
 
           export BE_IMAGE_TAG=${{ github.sha }}
           docker-compose build movie-backend
-          docker-compose push movie-backend
-
-          export BE_IMAGE_TAG="latest"
-          docker-compose build movie-backend
-          docker-compose push movie-backend

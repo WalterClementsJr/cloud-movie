@@ -97,12 +97,9 @@ jobs:
 
       - name: Build and push docker image to Amazon ECR
         run: |
+          cd ..
           export ECR_REGISTRY=${{ vars.ECR_REGISTRY }}
 
           export FE_IMAGE_TAG=${{ github.sha }}
           docker-compose build movie-frontend
-          docker-compose push movie-frontend
 
-          export FE_IMAGE_TAG="latest"
-          docker-compose build movie-frontend
-          docker-compose push movie-frontend
